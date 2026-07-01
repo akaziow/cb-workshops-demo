@@ -1,0 +1,4 @@
+CREATE OR REPLACE ROW ACCESS POLICY full_access_team_policy
+ON `PROJECT_ID.dwh.obt_sales`
+GRANT TO ('user:email 1')
+FILTER USING (TRUE);
