@@ -1,4 +1,4 @@
 CREATE OR REPLACE ROW ACCESS POLICY accessories_only_policy
 ON `PROJECT_ID.dwh.obt_sales`
 GRANT TO ('user:email 2')
-FILTER USING (product_category_name = ‘Accessories’);
+FILTER USING (product_category_name = "Accessories");
