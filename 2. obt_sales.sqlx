@@ -1,0 +1,72 @@
+config {
+ type: "table",
+ schema: "dwh",
+ name: "obt_sales",
+ tags: ["obt"],
+ bigquery: {
+   partitionBy: "order_date"
+ }
+}
+
+
+SELECT
+ -- 1. Pull all Fact metrics and business keys, but drop the surrogate join keys
+ f.* EXCEPT(
+   sales_key,
+   product_key,
+   customer_key,
+   credit_card_key,
+   ship_address_key,
+   order_status_key,
+   order_date_key
+ ),
+
+
+ -- 2. Pull all Dimension attributes, dropping their surrogate keys so they don't duplicate
+ p.* EXCEPT(product_key),
+ c.* EXCEPT(customer_key),
+ cc.* EXCEPT(credit_card_key),
+ a.* EXCEPT(address_key),
+ os.* EXCEPT(order_status_key),
+ d.* EXCEPT(date_key)
+
+
+FROM
+ ${ref("fact_sales")} AS f
+
+
+-- 3. Join all dimensions using the surrogate keys
+LEFT JOIN
+ ${ref("dim_product")} AS p
+ON
+ f.product_key = p.product_key
+
+
+LEFT JOIN
+ ${ref("dim_customer")} AS c
+ON
+ f.customer_key = c.customer_key
+
+
+LEFT JOIN
+ ${ref("dim_credit_card")} AS cc
+ON
+ f.credit_card_key = cc.credit_card_key
+
+
+LEFT JOIN
+ ${ref("dim_address")} AS a
+ON
+ f.ship_address_key = a.address_key
+
+
+LEFT JOIN
+ ${ref("dim_order_status")} AS os
+ON
+ f.order_status_key = os.order_status_key
+
+
+LEFT JOIN
+ ${ref("dim_date")} AS d
+ON
+ f.order_date_key = d.date_key
