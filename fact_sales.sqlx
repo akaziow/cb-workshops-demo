@@ -1,0 +1,55 @@
+config {
+   type: "table",
+   schema: "dwh",
+   tags: ["fact"],
+   bigquery: {
+       partitionBy: "order_date",
+       clusterBy: ["product_key"]
+   }
+}
+
+
+SELECT
+ -- Surrogate Keys
+ ${keys.surrogate("sd.sales_order_id", "sd.sales_order_detail_id")} AS sales_key,
+ ${keys.surrogate("sd.product_id")} AS product_key,
+ ${keys.surrogate("sh.customer_id")} AS customer_key,
+ ${keys.surrogate("sh.credit_card_id")} AS credit_card_key,
+ ${keys.surrogate("sh.ship_to_address_id")} AS ship_address_key,
+ ${keys.surrogate("sh.status")} AS order_status_key,
+ ${keys.surrogate("sh.order_date")} AS order_date_key,
+  -- Partitioning Column
+ sh.order_date,
+
+
+ -- Metrics
+ sd.unit_price,
+ sd.unit_price_discount,
+ p.standard_cost AS cost_of_goods_sold,
+ sd.order_qty,
+
+
+ -- Calculated Metrics
+ (sd.unit_price * sd.order_qty) AS gross_revenue,
+  -- Gross Profit: Revenue - Discount - Cost
+ -- IFNULL is used to prevent the entire calculation from becoming null if a discount or cost is missing
+ (sd.order_qty * (sd.unit_price - IFNULL(sd.unit_price_discount, 0) - IFNULL(p.standard_cost, 0))) AS gross_profit
+
+
+FROM
+ ${ref("stg_sales_order_detail")} AS sd
+-- Join to Header to get dates, customer, address, and status info
+JOIN
+ ${ref("stg_sales_order_header")} AS sh
+ON
+ sd.sales_order_id = sh.sales_order_id
+-- Join to Product to get the standard_cost
+LEFT JOIN
+ ${ref("stg_product")} AS p
+ON
+ sd.product_id = p.product_id
+
+
+post_operations {
+ ${keys.primary(ctx, "sales_key")}
+}
